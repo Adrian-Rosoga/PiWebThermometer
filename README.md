@@ -7,3 +7,5 @@ Getting started with DS16B28 at http://www.modmypi.com/blog/ds18b20-one-wire-dig
 Follow the instructions to have it all configured before using the program.
 
 Just launch the script and point the browser to http://<pi_address>:8000.
+
+[[https://github.com/Adrian-Rosoga/PiWebThermometer/blob/master/PiWebThermometer.JPG|alt=PiWenThermometer]]
