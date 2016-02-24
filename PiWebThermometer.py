@@ -3,9 +3,13 @@
 """
 RPiWebThermometer
 
-One-trick-pony Web server giving the temperature reading (Celsius degrees)
+One-trick-pony Web server giving temperature readings (Celsius degrees)
 from a DS18B20 sensor on a Raspberry Pi.
+
+Point the browser to http://<host>:8000
+
 Minimum and maximum temperature alert thresholds can be specified.
+
 The page auto-refreshes every 30 seconds.
 """
 
@@ -16,24 +20,35 @@ PORT = 8000
 MAX_TEMPERATURE_THRESHOLD = 22.0
 MIN_TEMPERATURE_THRESHOLD = 18.0
 
-import re, time, glob
+import re
+import time
+import glob
 from BaseHTTPServer import HTTPServer
 from SimpleHTTPServer import SimpleHTTPRequestHandler
 
-regex = re.compile(r't=(\d+)')
+REGEX = re.compile(r't=(\d+)')
 
 def get_temperature():
+    
     """ Read temperature from the sensor """
-    sensorFile = \
-        open(glob.glob('/sys/bus/w1/devices/28-00000*/w1_slave')[0], 'r')
-    sensorFile.readline()
-    line = sensorFile.readline()
-    sensorFile.close()
-    data = regex.search(line)
-    temperature = float(data.group(1)[0:4])/100.0
-    return temperature
+    
+    sensor_files = glob.glob('/sys/bus/w1/devices/28-00000*/w1_slave')
+    if len(sensor_files) == 0:
+        print "Error: No DS18B20 sensor detected."
+        return None
+    
+    while True:
+        with open(sensor_files[0], 'r') as sensor_file:
+            
+            if "YES" not in sensor_file.readline():
+                continue
 
-html_page_template = """<HTML>
+            data = REGEX.search(sensor_file.readline())
+            temperature = float(data.group(1)[0:4]) / 100.0
+            
+            return temperature
+
+HTML_PAGE_TEMPLATE = """<HTML>
 <HEAD>
     <TITLE>Web Thermometer</TITLE>
     <META HTTP-EQUIV=PRAGMA CONTENT=NO-CACHE>
@@ -47,7 +62,7 @@ html_page_template = """<HTML>
     <BR>
     <FONT SIZE=5>(Raspberry Pi, DS18B20)</FONT>
     <BR><BR><BR>
-    <FONT SIZE=14 COLOR=%s>%s &deg;C</FONT>
+    <FONT SIZE=17 COLOR=%s>%s &deg;C</FONT>
     <BR><BR><BR>
     <FONT SIZE=6>%s</FONT>
     <BR><BR>
@@ -59,7 +74,7 @@ html_page_template = """<HTML>
 </BODY>
 </HTML>"""
 
-class TemperatureHandler(SimpleHTTPRequestHandler, object):
+class TemperatureHandler(SimpleHTTPRequestHandler):
     
     """ Custom handler that returns the temperature page """
     
@@ -67,14 +82,14 @@ class TemperatureHandler(SimpleHTTPRequestHandler, object):
         
         """ Only the request for favicon is honored, for all else
         return the temperature page """
-        
+
         if self.path == '/favicon.ico':
             return SimpleHTTPRequestHandler.do_GET(self)
-        
+
         self.send_response(200)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
-        
+
         temperature = get_temperature()
         alert = ''
         color = 'GREEN'
@@ -87,15 +102,20 @@ class TemperatureHandler(SimpleHTTPRequestHandler, object):
                     str(MIN_TEMPERATURE_THRESHOLD) + ' &deg;C!'
             color = 'RED'
 
-        self.wfile.write( html_page_template % (color, temperature,
-                          time.ctime(), alert) )
+        self.wfile.write(HTML_PAGE_TEMPLATE % (color, temperature,
+                          time.ctime(), alert))
         self.wfile.close()
     
 def main():
-    
+
     """ Start HTTP server with the custom handler """
         
     try:
+        # Get the temperature once to see if all ok
+        if get_temperature() is None:
+            print "Exiting."
+            quit()
+
         server = HTTPServer(('', PORT), TemperatureHandler)
         print 'Started HTTP server on port ' + str(PORT) + '...'
         server.serve_forever()
