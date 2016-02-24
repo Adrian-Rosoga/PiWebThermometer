@@ -8,4 +8,6 @@ Follow the instructions to have it all configured before using the program.
 
 Just launch the script and point the browser to http://<pi_address>:8000.
 
+![alt tag](https://github.com/Adrian-Rosoga/PiWebThermometer/blob/master/PiWebThermometer.JPG)
+
 [[https://github.com/Adrian-Rosoga/PiWebThermometer/blob/master/PiWebThermometer.JPG|alt=PiWenThermometer]]
